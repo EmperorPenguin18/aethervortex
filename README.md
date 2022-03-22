@@ -1,9 +1,7 @@
-# mtg
+# ant
 
-https://invisible-island.net/cdk/
+Ant (Ant is not TappedOut) is a Magic: The Gathering TUI deckbuilder
 
-https://github.com/NandaScott/Scrython
+## Dependencies
 
-https://aur.archlinux.org/packages/?O=0&K=gathering
-
-https://github.com/p-gen/smenu
+Ant uses ncurses and [libscry](https://github.com/EmperorPenguin18/libscry)
