@@ -1,7 +1,7 @@
-# ant
+# Aether Vortex
 
-Ant (Ant is not TappedOut) is a Magic: The Gathering TUI deckbuilder
+Because it's Yet Another deckbuilder
 
 ## Dependencies
 
-Ant uses ncurses, chafa, libgit2 and [libscry](https://github.com/EmperorPenguin18/libscry)
+Aether Vortex uses ncurses, chafa, libgit2 and [libscry](https://github.com/EmperorPenguin18/libscry)
