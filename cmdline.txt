@@ -1,0 +1,9 @@
+If url, then import deck
+If file, then import deck
+If valid deck name, then open deck
+Otherwise start new deck
+
+--export or -e will export into the specified mode instead of opening deck for editing
+--help or -h help
+--version or -v version
+--text or -t will disable image rendering

@@ -1,0 +1,28 @@
+q - quit
+w - move to beginning of next category
+e - move to end of current category, or next if at end of current
+r - send to considering, then add assigned alternative
+t - assign alternative
+y - copy?
+u - undo last change
+i - send to considering, then enter filtered mode
+o - enter scryfall mode
+p - paste?
+a - enter filtered mode
+s - replace with different printing
+d - send to cuts
+f - search for card
+g - move to first card
+h - move left a card
+j - move down a card
+k - move up a card
+l - move right a card
+z - write + commit
+x - send to considering
+c - send to considering, then enter scryfall mode
+v - visual mode (for group operations)
+b - move to beginning of current category, or previous if at beginning of current
+n - set default scryfall search
+m - put in category
+, - set deck name
+Esc - return to normal mode
