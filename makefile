@@ -1,4 +1,4 @@
-LIBS=-lncursesw
+LIBS=-lncursesw -llua++
 
 build: src/*.cc
 	g++ -g -Og -D DEBUG src/*.cc $(LIBS) -o av
