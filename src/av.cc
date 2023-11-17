@@ -27,9 +27,9 @@ using namespace rapidjson;
 //temp
 const char* example_json =
 "{\
-	\"name\": \"G/W Humans\",\
+	\"name\": \"Mechanism\",\
 	\"format\": \"Commander\",\
-	\"search\": \"set:lci\",\
+	\"search\": \"legal:commander commander:ur otag:synergy-artifact-creature\",\
 	\"considering\": [],\
 	\"cards\": [\
 		{\
@@ -221,21 +221,44 @@ class AetherVortex {
 			m_pos_x = 0;
 			m_column_gap = 5;
 			m_mode = NORMAL_MODE;
-			memset(m_keymaps, 0, sizeof(m_keymaps));
-			m_keymaps['q'] = &AetherVortex::quit;
-			m_keymaps['i'] = &AetherVortex::insert;
-			m_keymaps['o'] = &AetherVortex::s_mode;
-			m_keymaps['a'] = &AetherVortex::c_mode;
-			m_keymaps['d'] = &AetherVortex::cut;
-			m_keymaps['g'] = &AetherVortex::begin;
-			m_keymaps['h'] = &AetherVortex::move_left;
-			m_keymaps['j'] = &AetherVortex::move_down;
-			m_keymaps['k'] = &AetherVortex::move_up;
-			m_keymaps['l'] = &AetherVortex::move_right;
-			m_keymaps['z'] = &AetherVortex::write;
-			m_keymaps['x'] = &AetherVortex::consider;
-			m_keymaps['c'] = &AetherVortex::change;
-			m_keymaps[27] = &AetherVortex::n_mode; //Esc
+			m_scry = new Scry;
+			getmaxyx(stdscr, m_max_y, m_max_x);
+			m_win_height = m_max_y-5;
+			m_win_info = newwin(m_max_y-2, m_max_x/5, 1, 0);
+			m_win_list = newwin(m_max_y-2, (m_max_x*4)/5, 1, m_max_x/5);
+
+			memset(m_keymaps_n, 0, sizeof(m_keymaps_n));
+			m_keymaps_n['q'] = &AetherVortex::quit;
+			m_keymaps_n['i'] = &AetherVortex::insert;
+			m_keymaps_n['o'] = &AetherVortex::s_mode;
+			m_keymaps_n['a'] = &AetherVortex::c_mode;
+			m_keymaps_n['d'] = &AetherVortex::cut;
+			m_keymaps_n['g'] = &AetherVortex::begin;
+			m_keymaps_n['h'] = &AetherVortex::move_left;
+			m_keymaps_n['j'] = &AetherVortex::move_down;
+			m_keymaps_n['k'] = &AetherVortex::move_up;
+			m_keymaps_n['l'] = &AetherVortex::move_right;
+			m_keymaps_n['z'] = &AetherVortex::write;
+			m_keymaps_n['x'] = &AetherVortex::consider;
+			m_keymaps_n['c'] = &AetherVortex::change;
+			m_keymaps_n[27] = &AetherVortex::n_mode; //Esc
+
+			memset(m_keymaps_c, 0, sizeof(m_keymaps_c));
+			m_keymaps_c['q'] = &AetherVortex::quit;
+			m_keymaps_c['h'] = &AetherVortex::move_left;
+			m_keymaps_c['j'] = &AetherVortex::move_down;
+			m_keymaps_c['k'] = &AetherVortex::move_up;
+			m_keymaps_c['l'] = &AetherVortex::move_right;
+			m_keymaps_c[27] = &AetherVortex::n_mode; //Esc
+
+			memset(m_keymaps_s, 0, sizeof(m_keymaps_s));
+			m_keymaps_s['q'] = &AetherVortex::quit;
+			m_keymaps_s['h'] = &AetherVortex::move_left;
+			m_keymaps_s['j'] = &AetherVortex::move_down;
+			m_keymaps_s['k'] = &AetherVortex::move_up;
+			m_keymaps_s['l'] = &AetherVortex::move_right;
+			m_keymaps_s[27] = &AetherVortex::n_mode; //Esc
+
 			if (buffer) {
 				lua_State* L = luaL_newstate();
 				luaL_openlibs(L);
@@ -243,11 +266,6 @@ class AetherVortex {
 				luaL_dostring(L, buffer);
 				lua_close(L);
 			}
-			m_scry = new Scry;
-			getmaxyx(stdscr, m_max_y, m_max_x);
-			m_win_info = newwin(m_max_y, m_max_x/5, 0, 0);
-			m_win_list = newwin(m_max_y, (m_max_x*4)/5, 0, m_max_x/5);
-			refresh();
 		}
 		~AetherVortex() {
 			delwin(m_win_info);
@@ -257,18 +275,24 @@ class AetherVortex {
 		}
 		void run() {
 			while (m_running) {
-				m_listpos = (m_max_y*m_pos_x) + m_pos_y;
-				const Value& a = m_doc["cards"];
+				clear();
+				printw("Card info");
+				mvprintw(0, m_max_x/5, (m_mode == CONSIDERING_MODE) ? "Considering" : (m_mode == SCRYFALL_MODE) ? "Scryfall search" : "Decklist");
+				refresh();
+				Document doc;
+				const Value& a = (m_mode == CONSIDERING_MODE) ? m_doc["considering"] : (m_mode == SCRYFALL_MODE) ? get_list(doc) : m_doc["cards"];
 				assert(a.IsArray());
 				//draw
 				wclear(m_win_list);
 				box(m_win_list, 0, 0);
+				wclear(m_win_info);
+				box(m_win_info, 0, 0);
 				size_t max_str_len = 0;
 				m_rows = 0;
 				m_columns = 0;
 				int col = 0;
 				for (auto& card : a.GetArray()) {
-					if (m_rows+2 > m_max_y-1) { //Start a new column
+					if (m_rows > m_win_height) { //Start a new column
 						m_rows = 0;
 						col += max_str_len+m_column_gap;
 						max_str_len = 0;
@@ -290,43 +314,53 @@ class AetherVortex {
 				}
 				m_rows -= 1;
 				wrefresh(m_win_list);
+				wrefresh(m_win_info);
 				//events
-				char c = getch();
-				if (m_keymaps[c] != NULL)
-					(this->*m_keymaps[c])();
+				m_listpos = ((m_win_height+1)*m_pos_x) + m_pos_y;
+				char ch = getch();
+				if (m_mode == NORMAL_MODE) {
+					if (m_keymaps_n[ch] != NULL)
+						(this->*m_keymaps_n[ch])();
+				} else if (m_mode == CONSIDERING_MODE) {
+					if (m_keymaps_c[ch] != NULL)
+						(this->*m_keymaps_c[ch])();
+				} else if (m_mode == SCRYFALL_MODE) {
+					if (m_keymaps_s[ch] != NULL)
+						(this->*m_keymaps_s[ch])();
+				}
 			}
 		}
 		int keymap_api(lua_State* L) {
 			char c = luaL_checknumber(L, 1);
 			const char* str = luaL_checkstring(L, 2);
 			if (strcmp(str, "quit") == 0) {
-				m_keymaps[c] = &AetherVortex::quit;
+				m_keymaps_n[c] = &AetherVortex::quit;
 			} else if (strcmp(str, "consider") == 0) {
-				m_keymaps[c] = &AetherVortex::consider;
+				m_keymaps_n[c] = &AetherVortex::consider;
 			} else if (strcmp(str, "insert") == 0) {
-				m_keymaps[c] = &AetherVortex::insert;
+				m_keymaps_n[c] = &AetherVortex::insert;
 			} else if (strcmp(str, "cut") == 0) {
-				m_keymaps[c] = &AetherVortex::cut;
+				m_keymaps_n[c] = &AetherVortex::cut;
 			} else if (strcmp(str, "c_mode") == 0) {
-				m_keymaps[c] = &AetherVortex::c_mode;
+				m_keymaps_n[c] = &AetherVortex::c_mode;
 			} else if (strcmp(str, "s_mode") == 0) {
-				m_keymaps[c] = &AetherVortex::s_mode;
+				m_keymaps_n[c] = &AetherVortex::s_mode;
 			} else if (strcmp(str, "n_mode") == 0) {
-				m_keymaps[c] = &AetherVortex::n_mode;
+				m_keymaps_n[c] = &AetherVortex::n_mode;
 			} else if (strcmp(str, "change") == 0) {
-				m_keymaps[c] = &AetherVortex::change;
+				m_keymaps_n[c] = &AetherVortex::change;
 			} else if (strcmp(str, "begin") == 0) {
-				m_keymaps[c] = &AetherVortex::begin;
+				m_keymaps_n[c] = &AetherVortex::begin;
 			} else if (strcmp(str, "move_left") == 0) {
-				m_keymaps[c] = &AetherVortex::move_left;
+				m_keymaps_n[c] = &AetherVortex::move_left;
 			} else if (strcmp(str, "move_down") == 0) {
-				m_keymaps[c] = &AetherVortex::move_down;
+				m_keymaps_n[c] = &AetherVortex::move_down;
 			} else if (strcmp(str, "move_up") == 0) {
-				m_keymaps[c] = &AetherVortex::move_up;
+				m_keymaps_n[c] = &AetherVortex::move_up;
 			} else if (strcmp(str, "move_right") == 0) {
-				m_keymaps[c] = &AetherVortex::move_right;
+				m_keymaps_n[c] = &AetherVortex::move_right;
 			} else if (strcmp(str, "write") == 0) {
-				m_keymaps[c] = &AetherVortex::write;
+				m_keymaps_n[c] = &AetherVortex::write;
 			}
 			return 0;
 		}
@@ -339,17 +373,21 @@ class AetherVortex {
 		int m_columns;
 		int m_column_gap;
 		Mode m_mode;
-		void (AetherVortex::*m_keymaps[255])();
+		void (AetherVortex::*m_keymaps_n[255])();
+		void (AetherVortex::*m_keymaps_c[255])();
+		void (AetherVortex::*m_keymaps_s[255])();
 		int m_listpos;
 		int m_max_x;
 		int m_max_y;
 		Scry* m_scry;
 		WINDOW* m_win_info;
 		WINDOW* m_win_list;
+		int m_win_height;
 
 		void set_image(const char* name) {
 			size_t img_size = 0;
 			byte* image = m_scry->cards_named_cache(name, &img_size);
+
 			FILE* fp = fopen("/tmp/av.jpg", "wb");
 			fwrite((FILE*)image, sizeof(byte), img_size/sizeof(byte), fp);
 			fclose(fp);
@@ -359,18 +397,23 @@ class AetherVortex {
 			fread(pixels, sizeof(unsigned char), 480*680*4, fp);
 			fclose(fp);
 
-			wclear(m_win_info);
-			box(m_win_info, 0, 0);
-
 			gint width_cells = m_max_x/5, height_cells = m_max_y;
 			chafa_calc_canvas_geometry(480, 680, &width_cells, &height_cells, 0.5, FALSE, FALSE);
 			ChafaCanvas* canvas = create_canvas(height_cells, width_cells-1);
 			chafa_canvas_draw_all_pixels(canvas, CHAFA_PIXEL_RGBA8_UNASSOCIATED, pixels, 480, 680, 480*4);
+
 			canvas_to_ncurses(m_win_info, canvas, 1, 1, height_cells, width_cells-1);
 			chafa_canvas_unref(canvas);
-
-			wrefresh(m_win_info);
 			free(pixels);
+		}
+
+		Value& get_list(Document& doc) {
+			const Value& search = m_doc["search"];
+			assert(search.IsString());
+			const char* str = search.GetString();
+			List* list = m_scry->cards_search_cache(str);
+			doc.Parse(list->json().c_str());
+			return doc["data"];
 		}
 
 		void quit() {
@@ -382,7 +425,7 @@ class AetherVortex {
 				m_doc["cards"].Erase(m_doc["cards"].Begin()+m_listpos);
 				m_pos_y -= 1;
 				if (m_pos_y < 0) {
-					m_pos_y = m_max_y-3;
+					m_pos_y = m_win_height;
 					m_pos_x -= 1;
 					if (m_pos_x < 0) {
 						m_pos_y = 0;
@@ -401,7 +444,7 @@ class AetherVortex {
 				m_doc["cards"].Erase(m_doc["cards"].Begin()+m_listpos);
 				m_pos_y -= 1;
 				if (m_pos_y < 0) {
-					m_pos_y = m_max_y-3;
+					m_pos_y = m_win_height;
 					m_pos_x -= 1;
 					if (m_pos_x < 0) {
 						m_pos_y = 0;
@@ -412,12 +455,15 @@ class AetherVortex {
 		}
 		void c_mode() {
 			m_mode = CONSIDERING_MODE;
+			begin();
 		}
 		void s_mode() {
 			m_mode = SCRYFALL_MODE;
+			begin();
 		}
 		void n_mode() {
 			m_mode = NORMAL_MODE;
+			begin();
 		}
 		void change() {
 			consider();
@@ -434,7 +480,7 @@ class AetherVortex {
 			if (m_pos_x == m_columns) {
 				if (m_pos_y < m_rows) m_pos_y++;
 			} else {
-				if (m_pos_y+2 < m_max_y-1) m_pos_y++;
+				if (m_pos_y < m_win_height) m_pos_y++;
 			}
 		}
 		void move_up() {
@@ -447,11 +493,11 @@ class AetherVortex {
 			}
 		}
 		void write() {
-			//temp
 			StringBuffer buffer;
 			buffer.Clear();
 			Writer<StringBuffer> writer(buffer);
 			m_doc.Accept(writer);
+			//temp
 			fprintf(stderr, "%s", buffer.GetString());
 		}
 };
