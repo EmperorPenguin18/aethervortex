@@ -350,6 +350,7 @@ class AetherVortex {
 		void set_image(const char* name) {
 			size_t img_size = 0;
 			byte* image = m_scry->cards_named_cache(name, &img_size);
+
 			FILE* fp = fopen("/tmp/av.jpg", "wb");
 			fwrite((FILE*)image, sizeof(byte), img_size/sizeof(byte), fp);
 			fclose(fp);
@@ -362,12 +363,26 @@ class AetherVortex {
 			wclear(m_win_info);
 			box(m_win_info, 0, 0);
 
-			gint width_cells = m_max_x/5, height_cells = m_max_y;
-			chafa_calc_canvas_geometry(480, 680, &width_cells, &height_cells, 0.5, FALSE, FALSE);
-			ChafaCanvas* canvas = create_canvas(height_cells, width_cells-1);
+			gint width_cells, height_cells, cell_width, cell_height;
+			gfloat font_ratio;
+			get_tty_size(&width_cells, &height_cells, &cell_width, &cell_height, &font_ratio);
+			chafa_calc_canvas_geometry(480, 680, &width_cells, &height_cells, font_ratio, TRUE, FALSE);
+
+			ChafaTermInfo* term_info;
+			ChafaCanvasMode mode;
+			ChafaPixelMode pixel_mode;
+			detect_terminal(&term_info, &mode, &pixel_mode);
+			ChafaCanvas* canvas = create_canvas(width_cells, height_cells, cell_width, cell_height, term_info, mode, pixel_mode);
 			chafa_canvas_draw_all_pixels(canvas, CHAFA_PIXEL_RGBA8_UNASSOCIATED, pixels, 480, 680, 480*4);
-			canvas_to_ncurses(m_win_info, canvas, 1, 1, height_cells, width_cells-1);
+
+			//canvas_to_ncurses(m_win_info, canvas, 1, 1, height_cells, width_cells, mode);
+			//
+			GString* printable = chafa_canvas_print(canvas, term_info);
+			waddwstr(m_win_info, (wchar_t*)printable->str);
+			g_string_free(printable, TRUE);
+			//
 			chafa_canvas_unref(canvas);
+			chafa_term_info_unref(term_info);
 
 			wrefresh(m_win_info);
 			free(pixels);
