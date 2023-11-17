@@ -1,4 +1,4 @@
-LIBS=-lncursesw -llua++
+LIBS=-lncursesw -llua++ -lscry `pkg-config --cflags --libs chafa`
 
 build: src/*.cc
 	g++ -g -Og -D DEBUG src/*.cc $(LIBS) -o av
