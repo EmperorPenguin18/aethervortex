@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <algorithm>
 #include <fstream>
+#include <filesystem>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -26,176 +27,13 @@ using namespace rapidjson;
 #include <git2.h>
 
 //temp
-const char* example_json =
+const char* empty_json =
 "{\
-	\"name\": \"Mechanism\",\
-	\"format\": \"Commander\",\
-	\"search\": \"legal:commander commander:ur otag:synergy-artifact-creature\",\
+	\"name\": \"\",\
+	\"format\": \"\",\
+	\"search\": \"\",\
 	\"considering\": [],\
-	\"cards\": [\
-		{\
-			\"name\": \"Brudiclad, Telchor Engineer\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Steel Overseer\"\
-		},\
-		{\
-			\"name\": \"Brudiclad, Telchor Engineer\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Steel Overseer\"\
-		},\
-		{\
-			\"name\": \"Brudiclad, Telchor Engineer\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Sai, Master Thopterist\"\
-		},\
-		{\
-			\"name\": \"Steel Overseer\"\
-		}\
-	],\
+	\"cards\": [],\
 	\"cuts\": []\
 }";
 
@@ -206,6 +44,14 @@ enum Mode {
 	NUM_MODES,
 	INVALID_MODE
 };
+
+static void write_file(const char* name, const char* contents) {
+	std::ofstream ofs(name, std::ofstream::out);
+	if (ofs) {
+		ofs << contents << std::endl;
+		ofs.close();
+	}
+}
 
 static int create_commit(git_repository *repo, git_index* index, const char* message) {
 	// Create a tree from the index
@@ -333,7 +179,7 @@ class AetherVortex {
 			endwin();
 			delete m_scry;
 		}
-		void run() {
+		int run() {
 			while (m_running) {
 				clear();
 				printw("Card info");
@@ -389,6 +235,7 @@ class AetherVortex {
 						(this->*m_keymaps_s[ch])();
 				}
 			}
+			return 0;
 		}
 		int keymap_api(lua_State* L) {
 			char c = luaL_checknumber(L, 1);
@@ -568,11 +415,8 @@ class AetherVortex {
 
 			char* filepath = new char[m_git_path.size()+strlen(filename)+2];
 			sprintf(filepath, "%s/%s", m_git_path.c_str(), filename);
-			std::ofstream ofs(filepath, std::ofstream::out);
+			write_file(filepath, buffer.GetString());
 			delete[] filepath;
-
-			ofs << buffer.GetString() << std::endl;
-			ofs.close();
 
 			git_index *idx = NULL;
 			int error = git_repository_index(&idx, m_repo);
@@ -602,19 +446,80 @@ static char* read_file(const char* name) {
 	return NULL;
 }
 
+static bool existing_deck(const char* path, char* arg) {
+	const std::filesystem::path git_path{path};
+	for (auto const& dir_entry : std::filesystem::directory_iterator{git_path})
+		if (strncmp(std::filesystem::path(dir_entry.path()).filename().c_str(), arg, strlen(arg)) == 0) return true;
+	return false;
+}
+
 int main(int argc, char** argv) {
-	Document doc;
-	doc.Parse(example_json); //temp
 	const char* home = getenv("HOME");
 	char* config_path = new char[strlen(home)+23];
 	char* git_path = new char[strlen(home)+17];
 	sprintf(config_path, "%s/.config/av/config.lua", home);
 	sprintf(git_path, "%s/.local/share/av", home);
-	char* buffer = read_file(config_path);
-	AetherVortex av(doc, buffer, git_path);
-	delete[] buffer;
+	char* lua_buf = read_file(config_path);
+
+	char* export_path = NULL;
+	Document doc;
+	for (int i = 1; i < argc; i++) {
+		std::filesystem::file_status status = std::filesystem::status(argv[i]);
+		if ((strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--export") == 0) && (i+1 != argc)) {
+			if (strlen(argv[i+1]) > 0) export_path = argv[i+1];
+			i++;
+		} else if (std::filesystem::is_regular_file(status)) {
+			doc.Parse(empty_json);
+			char* buf = read_file(argv[i]);
+			char* ptr = buf;
+			while (strlen(ptr) > 0) {
+				char* new_ptr = strchr(ptr, '\n');
+				*new_ptr = '\0';
+				for (int j = 0; j < atoi(ptr); j++) {
+					Value val;
+					val.SetObject();
+					Value name;
+					name.SetString(ptr+2, new_ptr-ptr-2, doc.GetAllocator());
+					val.AddMember("name", name, doc.GetAllocator());
+					doc["cards"].PushBack(val, doc.GetAllocator());
+				}
+				ptr = new_ptr+1;
+			}
+			delete[] buf;
+		} else if (existing_deck(git_path, argv[i])) {
+			char* filepath = new char[strlen(git_path)+strlen(argv[i])+7];
+			sprintf(filepath, "%s/%s.json", git_path, argv[i]);
+			char* buf = read_file(filepath);
+			doc.Parse(buf);
+			delete[] buf;
+			delete[] filepath;
+		} else {
+			printf("Invalid argument\n");
+			exit(1);
+		}
+	}
+	if (!doc.IsObject()) doc.Parse(empty_json);
+
+	if (export_path == NULL) {
+		AetherVortex av(doc, lua_buf, git_path);
+		av.run();
+	} else {
+		char* contents = (char*)malloc(1);
+		size_t len = 0;
+		const Value& a = doc["cards"];
+		for (auto& card : a.GetArray()) {
+			const char* name = card["name"].GetString();
+			printf("name: %s\n", name); //debug
+			contents = (char*)realloc(contents, len+strlen(name)+4);
+			len += sprintf(contents+len, "1 %s\n", name);
+			printf("len: %ld, contents: %s\n", len, contents); //debug
+		}
+		write_file(export_path, contents);
+		free(contents);
+	}
+
+	delete[] lua_buf;
 	delete[] config_path;
 	delete[] git_path;
-	av.run();
 	return 0;
 }
